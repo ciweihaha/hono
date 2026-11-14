@@ -1,22 +1,12 @@
 /** @jsxImportSource ../../ */
-import { JSDOM, ResourceLoader } from 'jsdom'
+import { JSDOM, requestInterceptor } from 'jsdom'
 import { Suspense, render } from '..'
 import { useState } from '../../hooks'
 import { clearCache, composeRef } from './components'
 
 describe('intrinsic element', () => {
-  let CustomResourceLoader: typeof ResourceLoader
   beforeAll(() => {
     global.requestAnimationFrame = (cb) => setTimeout(cb)
-
-    CustomResourceLoader = class CustomResourceLoader extends ResourceLoader {
-      fetch(url: string) {
-        return url.includes('invalid')
-          ? Promise.reject('Invalid URL')
-          : // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            (Promise.resolve(Buffer.from('')) as any)
-      }
-    }
   })
 
   let dom: JSDOM
@@ -26,7 +16,16 @@ describe('intrinsic element', () => {
 
     dom = new JSDOM('<html><head></head><body><div id="root"></div></body></html>', {
       runScripts: 'dangerously',
-      resources: new CustomResourceLoader(),
+      resources: {
+        interceptors: [
+          requestInterceptor(async (request) => {
+            if (request.url.includes('invalid')) {
+              throw new Error('Invalid URL')
+            }
+            return new Response('')
+          }),
+        ],
+      },
     })
     global.document = dom.window.document
     global.HTMLElement = dom.window.HTMLElement

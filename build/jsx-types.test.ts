@@ -1,9 +1,16 @@
 import { spawnSync } from 'node:child_process'
 import { createRequire } from 'node:module'
+import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 
-const compiler = createRequire(import.meta.url).resolve('typescript/bin/tsc')
+// TypeScript 7 no longer exposes `./bin/tsc` through its package exports,
+// so resolve the compiler through `package.json` instead.
+const compiler = join(
+  dirname(createRequire(import.meta.url).resolve('typescript/package.json')),
+  'bin',
+  'tsc'
+)
 const project = fileURLToPath(new URL('./fixtures/jsx-types/tsconfig.json', import.meta.url))
 
 describe.each(['hono/jsx', 'hono/jsx/dom'])('published %s declarations', (jsxImportSource) => {

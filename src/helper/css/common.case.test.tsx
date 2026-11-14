@@ -9,6 +9,12 @@ import type {
 
 interface Support {
   nest: boolean
+  // Whether `toString` round-trips the CSS through a CSSOM (e.g. jsdom's
+  // `insertRule` + `cssRules[].cssText`). The CSSOM serialization differs
+  // from hono's own CSS string (`from`/`to` become `0%`/`100%`, string
+  // quotes are normalized, `</style>` escapes are consumed), so the
+  // expected output differs in this environment.
+  cssom: boolean
 }
 export const renderTest = (
   getEnv: () => {
@@ -71,7 +77,9 @@ export const renderTest = (
         </>
       )
       expect(await toString(template)).toBe(
-        '<style id="hono-css">.css-1580801783{background-color:blue;animation:css-9294673 1s ease-in-out}@keyframes css-9294673{from{opacity:0}to{opacity:1}}</style><h1 class="css-1580801783">Hello!</h1>'
+        support.cssom
+          ? '<style id="hono-css">.css-1580801783{background-color:blue;animation:1s ease-in-out css-9294673}@keyframes css-9294673{0%{opacity:0}100%{opacity:1}}</style><h1 class="css-1580801783">Hello!</h1>'
+          : '<style id="hono-css">.css-1580801783{background-color:blue;animation:css-9294673 1s ease-in-out}@keyframes css-9294673{from{opacity:0}to{opacity:1}}</style><h1 class="css-1580801783">Hello!</h1>'
       )
     })
 
@@ -106,7 +114,9 @@ export const renderTest = (
         </>
       )
       expect(await toString(template)).toBe(
-        '<style id="hono-css">.css-4027435072{background-color:blue;content:\'I\\\'m a variable!\'}</style><h1 class="css-4027435072">Hello!</h1>'
+        support.cssom
+          ? '<style id="hono-css">.css-4027435072{background-color:blue;content:"I\'m a variable!"}</style><h1 class="css-4027435072">Hello!</h1>'
+          : '<style id="hono-css">.css-4027435072{background-color:blue;content:\'I\\\'m a variable!\'}</style><h1 class="css-4027435072">Hello!</h1>'
       )
     })
 
@@ -121,8 +131,13 @@ export const renderTest = (
           <h1 class={headerClass}>Hello!</h1>
         </>
       )
+      // In a CSSOM environment the `\/` escape is consumed when the rule
+      // is parsed, so the serialized output contains a literal `</style>`.
+      // The escape still matters (and is verified) for the string renderer.
       expect(await toString(template)).toBe(
-        '<style id="hono-css">.css-372954897{background-color:blue;content:\'<\\/style>\'}</style><h1 class="css-372954897">Hello!</h1>'
+        support.cssom
+          ? '<style id="hono-css">.css-372954897{background-color:blue;content:"</style>"}</style><h1 class="css-372954897">Hello!</h1>'
+          : '<style id="hono-css">.css-372954897{background-color:blue;content:\'<\\/style>\'}</style><h1 class="css-372954897">Hello!</h1>'
       )
     })
 
@@ -138,7 +153,9 @@ export const renderTest = (
         </>
       )
       expect(await toString(template)).toBe(
-        '<style id="hono-css">.css-372954897{background-color:blue;content:\'<\\/style>\'}</style><h1 class="css-372954897">Hello!</h1>'
+        support.cssom
+          ? '<style id="hono-css">.css-372954897{background-color:blue;content:"</style>"}</style><h1 class="css-372954897">Hello!</h1>'
+          : '<style id="hono-css">.css-372954897{background-color:blue;content:\'<\\/style>\'}</style><h1 class="css-372954897">Hello!</h1>'
       )
     })
 
@@ -152,7 +169,9 @@ export const renderTest = (
           <h1 class={headerClass}>Hello!</h1>
         </>
       )
-      expect(await toString(template)).toContain("content:'<\\/style>'")
+      expect(await toString(template)).toContain(
+        support.cssom ? 'content:"</style>"' : "content:'<\\/style>'"
+      )
     })
 
     it('Should escape </style> formed after CSS comments are removed', async () => {
@@ -183,7 +202,9 @@ export const renderTest = (
           <h1 class={headerClass}>Hello!</h1>
         </>
       )
-      expect(await toString(template)).toContain("content:'<\\/style>")
+      expect(await toString(template)).toContain(
+        support.cssom ? 'content:"</style>' : "content:'<\\/style>"
+      )
     })
 
     it('Should escape </style> split between two values', async () => {
@@ -198,7 +219,9 @@ export const renderTest = (
         </>
       )
       expect(await toString(template)).toBe(
-        '<style id="hono-css">.css-372954897{background-color:blue;content:\'<\\/style>\'}</style><h1 class="css-372954897">Hello!</h1>'
+        support.cssom
+          ? '<style id="hono-css">.css-372954897{background-color:blue;content:"</style>"}</style><h1 class="css-372954897">Hello!</h1>'
+          : '<style id="hono-css">.css-372954897{background-color:blue;content:\'<\\/style>\'}</style><h1 class="css-372954897">Hello!</h1>'
       )
     })
 
@@ -214,7 +237,9 @@ export const renderTest = (
         </>
       )
       expect(await toString(template)).toBe(
-        '<style id="hono-css">.css-372954897{background-color:blue;content:\'<\\/style>\'}</style><h1 class="css-372954897">Hello!</h1>'
+        support.cssom
+          ? '<style id="hono-css">.css-372954897{background-color:blue;content:"</style>"}</style><h1 class="css-372954897">Hello!</h1>'
+          : '<style id="hono-css">.css-372954897{background-color:blue;content:\'<\\/style>\'}</style><h1 class="css-372954897">Hello!</h1>'
       )
     })
 
@@ -230,7 +255,9 @@ export const renderTest = (
         </>
       )
       expect(await toString(template)).toBe(
-        '<style id="hono-css">.css-1321888780{background-color:blue;background:url(\'http://www.example.com/path/to/file.jpg\')}</style><h1 class="css-1321888780">Hello!</h1>'
+        support.cssom
+          ? '<style id="hono-css">.css-1321888780{background:url("http://www.example.com/path/to/file.jpg")}</style><h1 class="css-1321888780">Hello!</h1>'
+          : '<style id="hono-css">.css-1321888780{background-color:blue;background:url(\'http://www.example.com/path/to/file.jpg\')}</style><h1 class="css-1321888780">Hello!</h1>'
       )
     })
 
@@ -246,7 +273,9 @@ export const renderTest = (
         </>
       )
       expect(await toString(template)).toBe(
-        '<style id="hono-css">.css-2238574885{background-color:blue;content:\'say "Hello!"\'}</style><h1 class="css-2238574885">Hello!</h1>'
+        support.cssom
+          ? '<style id="hono-css">.css-2238574885{background-color:blue;content:"say \\"Hello!\\""}</style><h1 class="css-2238574885">Hello!</h1>'
+          : '<style id="hono-css">.css-2238574885{background-color:blue;content:\'say "Hello!"\'}</style><h1 class="css-2238574885">Hello!</h1>'
       )
     })
 
@@ -290,7 +319,9 @@ export const renderTest = (
         </>
       )
       expect(await toString(template)).toBe(
-        '<style id="hono-css">.css-2558359670{background-color:blue;animation:css-9294673 1s ease-in-out;color:red}@keyframes css-9294673{from{opacity:0}to{opacity:1}}</style><h1 class="css-2558359670">Hello!</h1>'
+        support.cssom
+          ? '<style id="hono-css">.css-2558359670{background-color:blue;animation:1s ease-in-out css-9294673;color:red}@keyframes css-9294673{0%{opacity:0}100%{opacity:1}}</style><h1 class="css-2558359670">Hello!</h1>'
+          : '<style id="hono-css">.css-2558359670{background-color:blue;animation:css-9294673 1s ease-in-out;color:red}@keyframes css-9294673{from{opacity:0}to{opacity:1}}</style><h1 class="css-2558359670">Hello!</h1>'
       )
     })
 
@@ -466,7 +497,9 @@ export const renderTest = (
           </>
         )
         expect(await toString(template)).toBe(
-          '<style id="hono-css">.css-1245070278{view-transition-name:css-399742870;background-color:blue}@keyframes css-9294673{from{opacity:0}to{opacity:1}}::view-transition-old(css-399742870){animation-name:css-9294673}::view-transition-new(css-399742870){animation-name:css-9294673}</style><h1 class="css-1245070278">Hello!</h1>'
+          support.cssom
+            ? '<style id="hono-css">.css-1245070278{view-transition-name:css-399742870;background-color:blue}@keyframes css-9294673{0%{opacity:0}100%{opacity:1}}::view-transition-old(css-399742870){animation-name:css-9294673}::view-transition-new(css-399742870){animation-name:css-9294673}</style><h1 class="css-1245070278">Hello!</h1>'
+            : '<style id="hono-css">.css-1245070278{view-transition-name:css-399742870;background-color:blue}@keyframes css-9294673{from{opacity:0}to{opacity:1}}::view-transition-old(css-399742870){animation-name:css-9294673}::view-transition-new(css-399742870){animation-name:css-9294673}</style><h1 class="css-1245070278">Hello!</h1>'
         )
       })
 
@@ -498,7 +531,9 @@ export const renderTest = (
           </>
         )
         expect(await toString(template)).toBe(
-          '<style id="hono-css">.css-1245070278{view-transition-name:css-399742870;background-color:blue}@keyframes css-9294673{from{opacity:0}to{opacity:1}}::view-transition-old(css-399742870){animation-name:css-9294673}::view-transition-new(css-399742870){animation-name:css-9294673}</style><h1 class="css-1245070278">Hello!</h1>'
+          support.cssom
+            ? '<style id="hono-css">.css-1245070278{view-transition-name:css-399742870;background-color:blue}@keyframes css-9294673{0%{opacity:0}100%{opacity:1}}::view-transition-old(css-399742870){animation-name:css-9294673}::view-transition-new(css-399742870){animation-name:css-9294673}</style><h1 class="css-1245070278">Hello!</h1>'
+            : '<style id="hono-css">.css-1245070278{view-transition-name:css-399742870;background-color:blue}@keyframes css-9294673{from{opacity:0}to{opacity:1}}::view-transition-old(css-399742870){animation-name:css-9294673}::view-transition-new(css-399742870){animation-name:css-9294673}</style><h1 class="css-1245070278">Hello!</h1>'
         )
       })
     })
@@ -575,7 +610,9 @@ export const renderTest = (
           </>
         )
         expect(await toString(template)).toBe(
-          '<style id="hono-css">.css-478287868{padding:0}</style><h1 class="css-478287868">Hello!</h1>'
+          support.cssom
+            ? '<style id="hono-css">.css-478287868{padding:0px}</style><h1 class="css-478287868">Hello!</h1>'
+            : '<style id="hono-css">.css-478287868{padding:0}</style><h1 class="css-478287868">Hello!</h1>'
         )
       })
 

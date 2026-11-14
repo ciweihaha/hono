@@ -12,3 +12,4 @@ allowBuilds:
 minimumReleaseAgeExclude:
   - miniflare@5.20261113.0-beta
   - wrangler@4.162.0
+  - jsdom@31.0.1

@@ -42,6 +42,7 @@ describe('CSS Helper', () => {
       toCSS,
       support: {
         nest: true,
+        cssom: false,
       },
     }
   })

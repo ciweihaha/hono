@@ -2,11 +2,17 @@ import { spawnSync } from 'node:child_process'
 import { cpSync, mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
 import { createRequire } from 'node:module'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 
-const compiler = createRequire(import.meta.url).resolve('typescript/bin/tsc')
+// TypeScript 7 no longer exposes `./bin/tsc` through its package exports,
+// so resolve the compiler through `package.json` instead.
+const compiler = join(
+  dirname(createRequire(import.meta.url).resolve('typescript/package.json')),
+  'bin',
+  'tsc'
+)
 const fixture = fileURLToPath(new URL('./fixtures/declaration-emit', import.meta.url))
 const packageRoot = fileURLToPath(new URL('..', import.meta.url))
 

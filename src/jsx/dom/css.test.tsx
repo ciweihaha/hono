@@ -47,7 +47,7 @@ describe('Style and css for jsx/dom', () => {
     )
     await Promise.resolve()
     expect(root.querySelector('style')?.sheet?.cssRules[0].cssText).toBe(
-      '.css-3142110215 {color: red;}'
+      '.css-3142110215 { color: red; }'
     )
   })
 
@@ -111,7 +111,7 @@ describe('Style and css for jsx/dom', () => {
       '<div><style id="custom-dom"></style><div class="h-hero">blue</div></div>'
     )
     await Promise.resolve()
-    expect(root.querySelector('style')?.sheet?.cssRules[0].cssText).toBe('.h-hero {color: blue;}')
+    expect(root.querySelector('style')?.sheet?.cssRules[0].cssText).toBe('.h-hero { color: blue; }')
   })
 })
 
@@ -143,7 +143,7 @@ describe('render', () => {
       toString,
       rawCssString,
       ...cssContext,
-      support: { nest: false },
+      support: { nest: false, cssom: true },
     }
   })
 })

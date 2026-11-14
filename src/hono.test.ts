@@ -3519,9 +3519,9 @@ describe('c.var - with testing types', () => {
     )
   })
 
-  // @ts-expect-error
   app.on(
     'GET',
+    // @ts-expect-error
     '/on/10',
     mw(),
     mw2(),
@@ -3650,9 +3650,9 @@ describe('c.var - with testing types', () => {
     }
   )
 
-  // @ts-expect-error
   app.on(
     ['GET', 'POST'],
+    // @ts-expect-error
     '/on/10',
     mw(),
     mw2(),

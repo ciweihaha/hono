@@ -1523,11 +1523,26 @@ describe('RequestInit work as expected', () => {
   afterEach(() => server.resetHandlers())
   afterAll(() => server.close())
 
+  // MSW v3 intercepts through undici, which adds its own default headers
+  // and reports `credentials` as `same-origin` on the intercepted request,
+  // so what the server observes no longer reflects what the client sent.
+  // Capture the init the client actually passes to `fetch` instead.
+  const fetchInits: RequestInit[] = []
+  const capturingFetch = async (input: string | URL | Request, init?: RequestInit) => {
+    fetchInits.push(init ?? {})
+    return globalThis.fetch(input, init)
+  }
+
+  beforeEach(() => {
+    fetchInits.length = 0
+  })
+
   const client = hc<AppType>('http://localhost', {
     headers: { 'x-hono': 'fire' },
     init: {
       credentials: 'include',
     },
+    fetch: capturingFetch,
   })
 
   it('Should overwrite method and fail', async () => {
@@ -1541,7 +1556,8 @@ describe('RequestInit work as expected', () => {
 
     expect(res.ok).toBe(true)
     const data = await res.json()
-    expect(data).toEqual({})
+    // The client headers were cleared; undici's own defaults still show up.
+    expect(data).not.toHaveProperty('x-hono')
   })
 
   it('Should overwrite headers', async () => {
@@ -1551,23 +1567,21 @@ describe('RequestInit work as expected', () => {
 
     expect(res.ok).toBe(true)
     const data = await res.json()
-    expect(data).toEqual({ 'x-hono': 'awesome' })
+    expect(data['x-hono']).toBe('awesome')
   })
 
   it('credentials is include', async () => {
     const res = await client.credentials.$get()
 
     expect(res.ok).toBe(true)
-    const data = await res.text()
-    expect(data).toEqual('include')
+    expect(fetchInits[0]?.credentials).toBe('include')
   })
 
   it('deepMerge should works and not unset credentials', async () => {
     const res = await client.credentials.$get(undefined, { init: { headers: { hi: 'hello' } } })
 
     expect(res.ok).toBe(true)
-    const data = await res.text()
-    expect(data).toEqual('include')
+    expect(fetchInits[0]?.credentials).toBe('include')
   })
 
   it('Should unset credentials', async () => {

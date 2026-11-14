@@ -232,7 +232,10 @@ describe('compress', async () => {
   const app = new Hono()
   app.use(compress())
   app.get('/fetch/:file', (c) => {
-    return fetch(`http://${serverInfo.address}:${serverInfo.port}/${c.req.param('file')}`)
+    // `serverInfo.address` is the wildcard `0.0.0.0`, which is not a
+    // connectable address (fetch to it hangs), so use the loopback instead.
+    const host = serverInfo.address === '0.0.0.0' ? '127.0.0.1' : serverInfo.address
+    return fetch(`http://${host}:${serverInfo.port}/${c.req.param('file')}`)
   })
   const agent = createAgent(app)
 
